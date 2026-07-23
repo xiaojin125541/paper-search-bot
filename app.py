@@ -7,7 +7,10 @@ st.title("📚 同学共享学术助手")
 
 # 【安全关键点】：这里的 Key 不写死，而是从隐藏的环境变量里读取
 # 这样就算你把代码公开给同学，他们也看不到你的密钥！
-client = OpenAI(api_key=st.secrets["DEEPSEEK_API_KEY"])
+client = OpenAI(
+    api_key=st.secrets["DEEPSEEK_API_KEY"],
+    base_url="https://api.deepseek.com"  # 加上这一行，指定去 DeepSeek 服务器
+)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
