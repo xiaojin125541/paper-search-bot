@@ -1,98 +1,150 @@
 import streamlit as st
 import pandas as pd
 from openai import OpenAI
+import markdown
 
-st.set_page_config(page_title="本科论文写作与文献辅助", page_icon="📚", layout="wide")
+st.set_page_config(page_title="本科毕业论文开题报告生成器", page_icon="📄", layout="wide")
+st.title("📄 文山学院本科毕业论文开题报告一键生成器")
 
-st.title("📚 本科论文写作与文献综述平台")
-st.caption("可上传知网导出的 xlsx 文件，一键生成高质量文献综述！")
-
-# 读取 API 密钥
+# 初始化 AI 客户端（使用免费的国内大模型网关）
 try:
     client = OpenAI(
-        api_key=st.secrets["DEEPSEEK_API_KEY"],
-        base_url="https://api.deepseek.com"
+        api_key=st.secrets["SILICONFLOW_API_KEY"],
+        base_url="https://api.siliconflow.cn/v1"
     )
+    MODEL_NAME = "deepseek-ai/DeepSeek-V3"
 except Exception:
-    st.error("❌ 未找到 API Key，请在 Streamlit 后台 Secrets 中配置 DEEPSEEK_API_KEY")
+    st.error("❌ 未找到 SILICONFLOW_API_KEY，请在 Streamlit 后台 Settings -> Secrets 配置。")
 
-# ---------------- 页面布局 ----------------
-left_col, right_col = st.columns([1, 3])
+# --- 左侧：基本信息填写区域 ---
+with st.sidebar:
+    st.header("📝 1. 填写学生与导师信息")
+    with st.form("student_info_form"):
+        name = st.text_input("姓名", value="孙继恒")
+        student_id = st.text_input("学号", value="20220806011046")
+        college = st.text_input("学院", value="人工智能学院")
+        major = st.text_input("专业", value="电气工程及其自动化")
+        grade = st.text_input("年级", value="2022级")
+        tutor_name = st.text_input("指导教师", value="李爱玲")
+        st.form_submit_button("信息已确认")
 
-with left_col:
-    st.header("📁 1. 上传知网文献")
-    uploaded_file = st.file_uploader("导出的知网 xlsx/csv 文件", type=["xlsx", "csv"])
-    
-    st.header("⚙️ 2. 功能选择")
-    doc_type = st.radio("选择生成内容", ["开题报告大纲", "文献综述大纲", "完整论文框架", "根据上传文件写综述"])
     st.markdown("---")
-    
-    st.write("📏 字数参考")
-    word_limit = st.radio("字数参考", ["3000字", "5000字", "10000字"], index=2, horizontal=True)
+    st.header("📁 2. 上传知网文献（可选）")
+    uploaded_file = st.file_uploader("导出的知网 xlsx 或 csv 文件", type=["xlsx", "csv"])
 
-with right_col:
-    st.header("✍️ 论文题目")
-    topic = st.text_input("请输入本科毕业论文题目：", placeholder="例如：基于NX MCD与S7-1200的矿泉水瓶自动上盖旋盖装置设计")
-    
-    if st.button("🚀 一键生成", type="primary", use_container_width=True):
-        if not topic:
-            st.warning("请先输入论文题目！")
-        else:
-            # 处理“根据上传文件写综述”的逻辑
-            if doc_type == "根据上传文件写综述":
-                if uploaded_file is None:
-                    st.error("你选择了【根据上传文件写综述】，但还没有上传知网导出的 xlsx/csv 文件！请在左侧上传。")
-                else:
-                    with st.spinner("📖 正在解析上传的文献并提炼文献综述..."):
-                        try:
-                            df = pd.read_excel(uploaded_file) if uploaded_file.name.endswith('xlsx') else pd.read_csv(uploaded_file)
-                            # 找出知网导出文件常见的列名
-                            title_col = next((c for c in df.columns if '标题' in c or '题名' in c), None)
-                            abstract_col = next((c for c in df.columns if '摘要' in c), None)
-                            author_col = next((c for c in df.columns if '作者' in c), None)
-                            source_col = next((c for c in df.columns if '来源' in c or '刊名' in c), None)
-                            
-                            # 提取前 10 条作为样本（避免字数太长消耗过多余额）
-                            lit_info = []
-                            for i in range(min(10, len(df))):
-                                row = df.iloc[i]
-                                meta = f"标题: {row[title_col] if title_col else '无'}\n作者: {row[author_col] if author_col else '无'}\n来源: {row[source_col] if source_col else '无'}\n摘要: {row[abstract_col] if abstract_col else '无'}"
-                                lit_info.append(meta)
-                            
-                            file_prompt = f"""
-                            用户上传了 {len(df)} 条知网文献（系统提取了前10条示例供你分析）。
-                            文献详情如下：
-                            {chr(10).join(lit_info)}
-                            
-                            根据以上文献，结合用户论文题目《{topic}》，撰写一篇高质量的【文献综述】。
-                            要求包含：研究背景、国外研究现状、国内研究现状、研究述评（现有研究的不足与未来趋势），并列出参考文献。
-                            字数约为{word_limit}。
-                            """
-                            sys_prompt = "你是资深学术论文导师。"
-                            response = client.chat.completions.create(
-                                model="deepseek-chat",
-                                messages=[
-                                    {"role": "system", "content": sys_prompt},
-                                    {"role": "user", "content": file_prompt}
-                                ],
-                            )
-                            st.success("✅ 文献综述生成成功！可复制到 Word 中核对。")
-                            st.markdown(response.choices[0].message.content)
-                        except Exception as e:
-                            st.error(f"解析文件或生成时出现错误：{e}")
-            else:
-                # 传统的生成大纲逻辑（不依赖文件）
-                with st.spinner(f"🤖 正在生成 {doc_type}..."):
-                    sys_prompt = f"""
-                    你是高校本科论文写作导师。请根据用户提供的《{topic}》生成一份 {doc_type}。
-                    如果选择【文献综述大纲】，请严格输出：引言、国外研究现状、国内研究现状、研究述评，以及10条知网格式的模拟参考文献。
-                    """
-                    response = client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=[
-                            {"role": "system", "content": sys_prompt},
-                            {"role": "user", "content": f"我的题目是《{topic}》，请生成 {doc_type}，字数约 {word_limit}。"}
-                        ]
-                    )
-                    st.success("✅ 生成成功！")
-                    st.markdown(response.choices[0].message.content)
+# --- 右侧：核心生成区域 ---
+st.subheader("✍️ 输入论文题目，开始生成报告")
+topic = st.text_input("请输入本科毕业论文题目：", placeholder="例如：基于PLC设计的直线振荡器激振器振动自动加油控制系统")
+word_limit = st.selectbox("预估字数要求（影响生成内容的详细程度）：", ["3000字", "5000字", "10000字"], index=0)
+
+# 定义一个将Markdown转换为Word可读HTML的函数
+def generate_word_html(title, name, student_id, content_md):
+    html_content = markdown.markdown(content_md)
+    html_doc = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>开题报告</title>
+        <style>
+            body {{ font-family: 'SimSun', serif; line-height: 1.6; margin: 2cm; }}
+            h1 {{ text-align: center; font-size: 22pt; }}
+            h2 {{ font-size: 16pt; margin-top: 20pt; }}
+            h3 {{ font-size: 14pt; margin-top: 15pt; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 15pt; margin-top: 15pt; }}
+            th, td {{ border: 1px solid black; padding: 8px; text-align: left; }}
+            p {{ text-indent: 2em; margin: 5px 0; }}
+        </style>
+    </head>
+    <body>
+        <p style="text-align:center; font-size:18pt; font-weight:bold;">文山学院本科生毕业论文（设计）开题报告</p>
+        <table>
+            <tr><td style="width:20%">姓名</td><td style="width:30%">{name}</td><td style="width:20%">学号</td><td style="width:30%">{student_id}</td></tr>
+            <tr><td>论文题目</td><td colspan="3">{title}</td></tr>
+        </table>
+        {html_content}
+    </body>
+    </html>
+    """
+    return html_doc
+
+if st.button("🚀 一键生成完整开题报告", type="primary", use_container_width=True):
+    if not topic:
+        st.warning("请先输入论文题目！")
+    else:
+        with st.spinner(f"🤖 AI 正在根据题目《{topic}》生成开题报告..."):
+            
+            uploaded_literatures = ""
+            if uploaded_file is not None:
+                try:
+                    df = pd.read_excel(uploaded_file) if uploaded_file.name.endswith('xlsx') else pd.read_csv(uploaded_file)
+                    title_col = next((c for c in df.columns if '标题' in c or '题名' in c), None)
+                    abstract_col = next((c for c in df.columns if '摘要' in c), None)
+                    author_col = next((c for c in df.columns if '作者' in c), None)
+                    
+                    lit_info = []
+                    for i in range(min(8, len(df))):
+                        row = df.iloc[i]
+                        meta = f"标题: {row[title_col] if title_col else '无'}\n作者: {row[author_col] if author_col else '无'}\n摘要: {row[abstract_col] if abstract_col else '无'}"
+                        lit_info.append(meta)
+                    uploaded_literatures = chr(10).join(lit_info)
+                except Exception:
+                    pass # 忽略解析错误，直接继续生成
+
+            system_prompt = f"""
+            你是一位经验丰富的大学本科毕业设计指导教师。请根据用户提供的信息，写一份标准规范的《文山学院本科生毕业论文（设计）开题报告》。
+            
+            学生信息如下：
+            姓名：{name}，学号：{student_id}，学院：{college}，专业：{major}，年级：{grade}。
+            指导教师：{tutor_name}。
+            论文题目：《{topic}》。
+            字数目标：约 {word_limit}。
+
+            请务必严格且详细包含以下板块（必须包含标题和加粗的小标题）：
+            1. 选题的目的、意义（包含理论意义、现实意义）。
+            2. 选题的研究现状（国内外相关研究综述）。
+            3. 论文主要内容（提纲，至少包含6个章节的一级标题）。
+            4. 拟研究的主要问题、重点和难点。
+            5. 研究目标。
+            6. 研究方法、技术路线、实验方案、可行性分析。
+            7. 研究的创新之处（至少3点）。
+            8. 进度安排。
+            9. 参考文献（如果上传了文档，将上传文档列为参考文献；如果没有，请模拟生成10篇符合学术规范的真实文献）。
+            """
+
+            user_prompt = f"""
+            我的论文题目是《{topic}》，指导老师是{tutor_name}，字数要求约{word_limit}，请帮我写开题报告。
+            {f"下面是用户实际找到的参考文献资料，请务必基于此资料写研究现状(文献综述)，并参考作为最终的参考文献：\n{uploaded_literatures}" if uploaded_literatures else ""}
+            """
+
+            try:
+                response = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.7
+                )
+                
+                final_answer = response.choices[0].message.content
+
+                st.success("✅ 开题报告生成成功！")
+                st.markdown("---")
+                
+                # 1. 展示生成的内容
+                st.markdown(final_answer)
+                st.markdown("---")
+                
+                # 2. 提供“生成Word文档下载”功能【核心新功能】
+                doc_bytes = generate_word_html(topic, name, student_id, final_answer)
+                st.download_button(
+                    label="📥 下载开题报告 (.doc)",
+                    data=doc_bytes,
+                    file_name=f"{topic}_开题报告.doc",
+                    mime="application/msword"
+                )
+                st.caption("💡 下载后使用 Microsoft Word 打开，即可获得排版好的正式开题报告文档。")
+                
+            except Exception as e:
+                st.error(f"⚠️ 生成失败！请将以下错误截图发给我帮助排查：{e}")
