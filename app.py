@@ -5,12 +5,22 @@ from duckduckgo_search import DDGS
 st.set_page_config(page_title="学术文献搜索助手", layout="centered")
 st.title("📚 同学共享学术助手")
 
-# 【安全关键点】：这里的 Key 不写死，而是从隐藏的环境变量里读取
-# 这样就算你把代码公开给同学，他们也看不到你的密钥！
+# ----- 新增的调试代码，帮你找错误 -----
+try:
+    # 尝试读取秘钥
+    api_key = st.secrets["DEEPSEEK_API_KEY"]
+    st.success("✅ 配置检测成功：已成功读取到 DeepSeek API Key！") 
+except KeyError:
+    st.error("❌ 严重错误：系统没有读取到 Secrets 里的 DEEPSEEK_API_KEY！请去 Settings -> Secrets 检查是否保存成功！")
+    st.stop() # 直接停止后续运行，避免报乱码
+# -------------------------------------
+
 client = OpenAI(
     api_key=st.secrets["DEEPSEEK_API_KEY"],
-    base_url="https://api.deepseek.com"  # 加上这一行，指定去 DeepSeek 服务器
+    base_url="https://api.deepseek.com" 
 )
+
+# ... 后面原本的代码不用动 ...
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
