@@ -50,13 +50,17 @@ if prompt := st.chat_input("请输入你的论文题目或关键词："):
         # 组装提示词发给 DeepSeek
         system_prompt = f"你是学术助手。请根据问题以及搜索到的公开资料，给同学提供有参考价值的回答。如果资料不相关，请说明。\n\n【搜索到的资料】\n{chr(10).join(search_content)}"
         
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        )
+       try:
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+    )
+except Exception as e:
+    st.error(f"⚠️ 抓取到底层真实报错啦！请截图这段文字发给我：{e}")
+    st.stop()
         answer = response.choices[0].message.content
         st.markdown(answer)
         st.session_state.messages.append({"role": "assistant", "content": answer})
