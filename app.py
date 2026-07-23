@@ -35,7 +35,7 @@ if prompt := st.chat_input("请输入你的论文题目或关键词："):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 模仿截图中的“步骤展开”，显示正在调用 web_search
+        # 检索步骤
         with st.status("🔍 正在调用 web_search 工具检索全网资源...", expanded=True) as status:
             search_content = []
             try:
@@ -50,17 +50,18 @@ if prompt := st.chat_input("请输入你的论文题目或关键词："):
         # 组装提示词发给 DeepSeek
         system_prompt = f"你是学术助手。请根据问题以及搜索到的公开资料，给同学提供有参考价值的回答。如果资料不相关，请说明。\n\n【搜索到的资料】\n{chr(10).join(search_content)}"
         
-       try:
-    response = client.chat.completions.create(
-        model="deepseek-chat",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ]
-    )
-except Exception as e:
-    st.error(f"⚠️ 抓取到底层真实报错啦！请截图这段文字发给我：{e}")
-    st.stop()
-        answer = response.choices[0].message.content
-        st.markdown(answer)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+        # 核心生成回答的代码（加了 try 抓取错误）
+        try:
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            answer = response.choices[0].message.content
+            st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+        except Exception as e:
+            # 如果报错，把真正的错误信息打印在页面上
+            st.error(f"⚠️ 抓取到底层真实报错啦！请截图这段文字发给我：{e}")
