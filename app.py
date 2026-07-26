@@ -13,8 +13,7 @@ try:
     base_url="https://api.deepseek.com"
 )
 MODEL_NAME = "deepseek-chat"
-)
-MODEL_NAME = "glm-4-flash"  # 用 glm-4-flash 做普通生成非常快且省额度
+
 except Exception:
     st.error("❌ 未找到 SILICONFLOW_API_KEY，请在 Streamlit 后台 Settings -> Secrets 配置。")
 
