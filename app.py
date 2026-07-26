@@ -13,7 +13,7 @@ try:
         api_key=st.secrets["DEEPSEEK_API_KEY"],
         base_url="https://api.deepseek.com"
     )
-    MODEL_NAME = "deepseek-chat"
+    MODEL_NAME = "deepseek-v4-flash"
     st.success("✅ 成功连接 DeepSeek API") # 加上这句提示，让你一看就知道连上了
 except Exception:
     st.error("❌ 未找到 DEEPSEEK_API_KEY，或者 DeepSeek 接口异常。请在 Streamlit 后台 Settings -> Secrets 配置正确的 DeepSeek Key。")
