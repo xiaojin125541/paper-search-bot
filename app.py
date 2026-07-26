@@ -6,16 +6,18 @@ import markdown
 st.set_page_config(page_title="本科毕业论文开题报告生成器", page_icon="📄", layout="wide")
 st.title("📄 文山学院本科毕业论文开题报告一键生成器")
 
-# 初始化 AI 客户端（使用免费的国内大模型网关）
+# 初始化 AI 客户端（这次换成 DeepSeek 官方接口）
+# 使用 try...except 完美包裹，防止报错
 try:
-   client = OpenAI(
-    api_key=st.secrets["DEEPSEEK_API_KEY"],
-    base_url="https://api.deepseek.com"
-)
-MODEL_NAME = "deepseek-chat"
-
+    client = OpenAI(
+        api_key=st.secrets["DEEPSEEK_API_KEY"],
+        base_url="https://api.deepseek.com"
+    )
+    MODEL_NAME = "deepseek-chat"
+    st.success("✅ 成功连接 DeepSeek API") # 加上这句提示，让你一看就知道连上了
 except Exception:
-    st.error("❌ 未找到 SILICONFLOW_API_KEY，请在 Streamlit 后台 Settings -> Secrets 配置。")
+    st.error("❌ 未找到 DEEPSEEK_API_KEY，或者 DeepSeek 接口异常。请在 Streamlit 后台 Settings -> Secrets 配置正确的 DeepSeek Key。")
+    st.stop() # 如果没有 Key，立刻停止运行，避免后续大量报错
 
 # --- 左侧：基本信息填写区域 ---
 with st.sidebar:
@@ -125,7 +127,6 @@ if st.button("🚀 一键生成完整开题报告", type="primary", use_containe
             9. 参考文献（如果上传了文档，将上传文档列为参考文献；如果没有，请模拟生成10篇符合学术规范的真实文献）。
             """
 
-            # 【修正点】将容易报错的嵌套 f-string 移到外面来写
             ref_section = ""
             if uploaded_literatures:
                 ref_section = f"下面是用户实际找到的参考文献资料，请务必基于此资料写研究现状(文献综述)，并参考作为最终的参考文献：\n{uploaded_literatures}"
