@@ -8,11 +8,13 @@ st.title("📄 文山学院本科毕业论文开题报告一键生成器")
 
 # 初始化 AI 客户端（使用免费的国内大模型网关）
 try:
-    client = OpenAI(
-        api_key=st.secrets["SILICONFLOW_API_KEY"],
-        base_url="https://api.siliconflow.cn/v1"
-    )
-    MODEL_NAME = "deepseek-ai/DeepSeek-V3"
+   client = OpenAI(
+    api_key=st.secrets["DEEPSEEK_API_KEY"],
+    base_url="https://api.deepseek.com"
+)
+MODEL_NAME = "deepseek-chat"
+)
+MODEL_NAME = "glm-4-flash"  # 用 glm-4-flash 做普通生成非常快且省额度
 except Exception:
     st.error("❌ 未找到 SILICONFLOW_API_KEY，请在 Streamlit 后台 Settings -> Secrets 配置。")
 
